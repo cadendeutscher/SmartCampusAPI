@@ -8,10 +8,28 @@ db = SQLAlchemy()
 
 login = LoginManager()
 
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///<db_name>.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///data.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db.init_app(app)
 
+# Models 
+#Source of help: https://flask-sqlalchemy.palletsprojects.com/en/2.x/models/
+#This is a one to many relational DB Sensors are linked to their children data
+class Sensor(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    sname = db.Column(db.String(80), nullable=False, unique=True)
+    building = db.Column(db.String(80), nullable = False)
+    room = db.Column(db.Integer, nullable = False)
+    datas = db.relationship('SensorData', backref='sensor', lazy=True)
+
+
+class SensorData(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    vtype = db.Column(db.String(80), nullable = False)
+    value =db.Column(db.String(80), nullable = False)
+    date = db.Column(db.DateTime, nullable = False)
+    sensor_id = db.Column(db.Integer, db.ForeignKey('sensor.id'))
+   
 
 #Allowed IP address for input
 trusted_proxies = ('42.42.42.42', '82.42.82.42', '127.0.0.1')
