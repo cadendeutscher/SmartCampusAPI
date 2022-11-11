@@ -1,12 +1,9 @@
 from flask import Flask, abort, request, redirect, render_template, request, url_for, jsonify
 from flask_sqlalchemy import SQLAlchemy
-from models import db
 
 app = Flask(__name__)
  
 db = SQLAlchemy()
-
-login = LoginManager()
 
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///data.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -31,7 +28,7 @@ class SensorData(db.Model):
     sensor_id = db.Column(db.Integer, db.ForeignKey('sensor.id'))
    
 
-#Allowed IP address for input
+#Allowed IP address for input...This are mocked IPs right now!
 trusted_proxies = ('42.42.42.42', '82.42.82.42', '127.0.0.1')
 
 
@@ -45,6 +42,10 @@ def limit_remote_addr():
 
     if remote != '10.20.30.40':
         abort(403)  # Forbidden
+
+@app.before_first_request
+def create_table():
+    db.create_all()
 
 #HomeRoute For Application
 @app.route("/")
