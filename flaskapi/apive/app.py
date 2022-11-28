@@ -64,7 +64,42 @@ def sign_in():
 #Query Sensor Data Return JSON for specific time line
 @app.route("/sensor/<sensor>/<datef>/<datet>")
 def getSpecificData(sensor,datef,datet):
-    return "Successful retrieval"
+    #Query Data for a sensor
+    sData = Sensor.query.filter((Sensor.sname == sensor)).one()
+   
+    #create date object for from date
+    fyear = int(datef[0:4])
+    fmonth = int(datef[5:7])
+    fday = int(datef[8:10])
+    fdate = dt.date(fyear,fmonth,fday)
+     #create date object from todate
+    tyear = int(datet[0:4])
+    tmonth = int(datet[5:7])
+    tday = int(datet[8:10])
+    tdate = dt.date(tyear,tmonth,tday)
+    dList = []
+    sensorData = sData.datas
+    #sort through the different data objects
+    for data in sensorData:
+        #create a date object for the data from the sensor
+        dyear = int(data.date[0:4])
+        dmonth =int(data.date[5:7])
+        dday = int(data.date[8:10])
+        currentD = dt.date(dyear,dmonth,dday)
+        #check if the sensor date is between the from and todates 
+        if fdate <= currentD and tdate >= currentD:
+            dDic = {
+            "sid": data.id,
+            "sensor": sData.sname,
+            "building": sData.building,
+            "room": sData.room,
+            "did": data.id,
+            "vtype": data.vtype,
+            "value": data.value,
+            "date": data.date
+            }
+            dList.append(dDic)
+    return json.dumps(dList)
 
 #Query Data from a specific room
 @app.route("/<building>/<room>/<datef>/<datet>")
