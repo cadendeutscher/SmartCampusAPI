@@ -66,7 +66,6 @@ def sign_in():
 def getSpecificData(sensor,datef,datet):
     #Query Data for a sensor
     sData = Sensor.query.filter((Sensor.sname == sensor)).one()
-   
     #create date object for from date
     fyear = int(datef[0:4])
     fmonth = int(datef[5:7])
@@ -101,11 +100,51 @@ def getSpecificData(sensor,datef,datet):
             dList.append(dDic)
     return json.dumps(dList)
 
+   
 #Query Data from a specific room
 @app.route("/<building>/<room>/<datef>/<datet>")
 def room_query(building,room,datef,datet):
-    return "room_query"
+    #Query Data for todays sensors
+    sData = Sensor.query.filter((Sensor.room == room)).all()
+   
+    #create date object for from date
+    fyear = int(datef[0:4])
+    fmonth = int(datef[5:7])
+    fday = int(datef[8:10])
+    fdate = dt.date(fyear,fmonth,fday)
+     #create date object from todate
+    tyear = int(datet[0:4])
+    tmonth = int(datet[5:7])
+    tday = int(datet[8:10])
+    tdate = dt.date(tyear,tmonth,tday)
+    dList = []
+    #if the data is for today create a JSON object add it to a JSONArray and return the array
+    #sort through the sensors
+    for sensors in sData:
+        sensorData = sensors.datas
+        #sort through the different data objects
+        for data in sensorData:
+            #create a date object for the data from the sensor
+            dyear = int(data.date[0:4])
+            dmonth =int(data.date[5:7])
+            dday = int(data.date[8:10])
+            currentD = dt.date(dyear,dmonth,dday)
+            #check if the sensor date is between the from and to dates 
+            if fdate <= currentD and tdate >= currentD:
+                dDic = {
+                "sid": data.id,
+                "sensor": sensors.sname,
+                "building": sensors.building,
+                "room": sensors.room,
+                "did": data.id,
+                "vtype": data.vtype,
+                "value": data.value,
+                "date": data.date
+                }
+                dList.append(dDic)
+    return json.dumps(dList)
 
+   
 #Query Data from a specific building
 @app.route("/building/<building>/<datef>/<datet>")
 def building_query(building,datef,datet):
@@ -150,8 +189,6 @@ def building_query(building,datef,datet):
     return json.dumps(dList)
 
 
-
-
 #Query Sensor Data for the current day
 @app.route("/<sensor>/")
 def getDayData(sensor):
@@ -191,4 +228,3 @@ def addData(sensor,dtype,building, room, value,date):
     #Commit Data to database
     db.session.commit()
     return "Successful Addition"
-
