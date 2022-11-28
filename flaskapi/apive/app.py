@@ -13,6 +13,7 @@ db.init_app(app)
 
 # Models 
 #Source of help: https://flask-sqlalchemy.palletsprojects.com/en/2.x/models/
+#More Help Here: https://www.digitalocean.com/community/tutorials/how-to-use-one-to-many-database-relationships-with-flask-sqlalchemy#step-4-displaying-a-single-post-and-its-comments
 #This is a one to many relational DB Sensors are linked to their children data
 class Sensor(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -79,24 +80,38 @@ def building_query(building,datef,datet):
 #Query Sensor Data for the current day
 @app.route("/<sensor>/")
 def getDayData(sensor):
-
-    #Query Data for todays data
+    #Query Data for todays sensor
+    sData = Sensor.query.filter((Sensor.sname == sensor)).one()
+    sensorData = sData.datas
     tday = datetime.now().strftime("20%y-%m-%d")
-    SensorData.query.filter((SensorData.date == tday)).all()
-
-    #Query the sensor which the data is tied to
-
-    return "Successful retrieval"
+    dList = []
+    for data in sensorData:
+        if data.date == tday:
+            dDic = {
+            "sid": data.id,
+            "sensor": sData.sname,
+            "building": sData.building,
+            "room": sData.room,
+            "did": data.id,
+            "vtype": data.vtype,
+            "value": data.value,
+            "date": data.date
+            }
+            dList.append(dDic)
+    return json.dumps(dList)
 
 
 #Add Data to DB
 @app.route("/<sensor>/<dtype>/<building>/<room>/<value>/<date>")
 def addData(sensor,dtype,building, room, value,date):
     #Create sensor and data objects and commit them to the DB
+    #Create Sensor
     asensor = Sensor(sname=sensor,building=building,room=room)
+    #Create Sensor Data assigned to sensor
     sensordata = SensorData(vtype=dtype,value=value,date=date, sensor=asensor)
     db.session.add(asensor)
     db.session.add(sensordata)
+    #Commit Data to database
     db.session.commit()
     return "Successful Addition"
 
