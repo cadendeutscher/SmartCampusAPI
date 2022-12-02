@@ -1,8 +1,9 @@
-from flask import Flask, abort, request, redirect, render_template, request, url_for, jsonify
+from flask import Flask, abort, redirect, render_template, request, url_for, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
 import json
 import datetime as dt
+import pip._vendor.requests 
 
 app = Flask(__name__)
  
@@ -54,7 +55,7 @@ def create_table():
 #HomeRoute For Application
 @app.route("/")
 def hello_world():
-    return render_template("main_page.html")
+    return render_template("main_page.html", sensors=Sensor.query.all())
 
 #Sign-in for admin    
 @app.route("/signin", methods = ['POST', 'GET'])
@@ -228,3 +229,8 @@ def addData(sensor,dtype,building, room, value,date):
     #Commit Data to database
     db.session.commit()
     return "Successful Addition"
+
+# Display the charts and graphs for a specific sensor
+@app.route("/info/<sensorName>")
+def displaySensorInfo(sensorName):
+    return "Do nothing"
