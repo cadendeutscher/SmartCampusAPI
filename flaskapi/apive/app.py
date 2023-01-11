@@ -33,7 +33,7 @@ class SensorData(db.Model):
     sensor_id = db.Column(db.Integer, db.ForeignKey('sensor.id'), nullable = False)
    
 
-#Allowed IP address for input...This are mocked IPs right now!
+#Allowed IP address for input...These are mocked IPs right now!
 trusted_proxies = ('42.42.42.42', '82.42.82.42', '127.0.0.1')
 
 
@@ -213,18 +213,32 @@ def getDayData(sensor):
             "date": data.date
             }
             dList.append(dDic)
-    return json.dumps(dList)
 
+    next_url = request.args.get('next')
+    #if this url was accessed directly pass back a JSON Array other wise go back to the original route
+    if next_url is None:
+        return json.dumps(dList)
+    else:
+        return redirect(url_for('displaySensorInfo', sensorName=sensor, data=json.dumps(dList)))
+ 
 
 #Add Data to DB
 @app.route("/<sensor>/<dtype>/<building>/<room>/<value>/<date>")
 def addData(sensor,dtype,building, room, value,date):
-    #Create sensor and data objects and commit them to the DB
-    #Create Sensor
-    asensor = Sensor(sname=sensor,building=building,room=room)
+    #Check if sensor already exsists in database
+    theSensor = Sensor.query.filter((Sensor.sname == sensor)).one()
+    #if the sensor does not exsist create it, otherwise just add the data.
+    if theSensor is None:
+        #Create sensor and data objects and commit them to the DB
+        #Create Sensor
+        asensor = Sensor(sname=sensor,building=building,room=room)
+        db.session.add(asensor)
+    else: 
+        #make set the sensor to add the data to, to be equal to the queried sensor
+        asensor = theSensor
+
     #Create Sensor Data assigned to sensor
     sensordata = SensorData(vtype=dtype,value=value,date=date, sensor=asensor)
-    db.session.add(asensor)
     db.session.add(sensordata)
     #Commit Data to database
     db.session.commit()
@@ -233,4 +247,10 @@ def addData(sensor,dtype,building, room, value,date):
 # Display the charts and graphs for a specific sensor
 @app.route("/info/<sensorName>")
 def displaySensorInfo(sensorName):
-    return "Do nothing"
+    data = request.args.get('data')
+    #Check if the data has already been queried 
+    if data is None:
+        #Redirect to the getDayData url to get JSON objects for the days date...by passing the next arguement we tell it to redirect back here
+        return redirect(url_for('getDayData', sensor = sensorName, next="redirect"))
+    else:
+        return render_template("sensorinfo.html", data=data)
