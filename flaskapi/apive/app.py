@@ -22,14 +22,15 @@ class Sensor(db.Model):
     sname = db.Column(db.String(80), nullable=False, unique=True)
     building = db.Column(db.String(80), nullable = False)
     room = db.Column(db.Integer, nullable = False)
+    vtype = db.Column(db.String(80), nullable = False)
     datas = db.relationship('SensorData', backref='sensor', lazy=True)
 
 
 class SensorData(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    vtype = db.Column(db.String(80), nullable = False)
     value =db.Column(db.String(80), nullable = False)
     date = db.Column(db.String(80), nullable = False)
+    time = db.Column(db.String(80), nullable = False)
     sensor_id = db.Column(db.Integer, db.ForeignKey('sensor.id'), nullable = False)
    
 
@@ -91,10 +92,11 @@ def getSpecificData(sensor,datef,datet):
             dDic = {
             "sid": data.id,
             "sensor": sData.sname,
+            "vtype": sData.vtype,
             "building": sData.building,
             "room": sData.room,
             "did": data.id,
-            "vtype": data.vtype,
+            "time": data.time,
             "value": data.value,
             "date": data.date
             }
@@ -133,14 +135,16 @@ def room_query(building,room,datef,datet):
             #check if the sensor date is between the from and to dates 
             if fdate <= currentD and tdate >= currentD:
                 dDic = {
-                "sid": data.id,
+                "sid": sensors.id,
                 "sensor": sensors.sname,
+                "vtype": sensors.vtype,
                 "building": sensors.building,
                 "room": sensors.room,
                 "did": data.id,
-                "vtype": data.vtype,
                 "value": data.value,
-                "date": data.date
+                "date": data.date,
+                "time": data.time
+
                 }
                 dList.append(dDic)
     return json.dumps(dList)
@@ -177,14 +181,15 @@ def building_query(building,datef,datet):
             #check if the sensor date is between the from and todates 
             if fdate <= currentD and tdate >= currentD:
                 dDic = {
-                "sid": data.id,
+                "sid": sensors.id,
                 "sensor": sensors.sname,
                 "building": sensors.building,
+                "vtype": sensors.vtype,
                 "room": sensors.room,
                 "did": data.id,
-                "vtype": data.vtype,
                 "value": data.value,
-                "date": data.date
+                "date": data.date,
+                "time": data.time
                 }
                 dList.append(dDic)
     return json.dumps(dList)
@@ -198,21 +203,18 @@ def getDayData(sensor):
     sensorData = sData.datas
     #Get current date
     tday = datetime.now().strftime("20%y-%m-%d")
-    dList = []
+    dList = [{"senorID": sData.id, "sensorName" : sData.sname, "building" : sData.building, "room" : sData.room, "vtype": sData.vtype, "data" : []}]
     #if the data is for today create a JSON object add it to a JSONArray and return the array
     for data in sensorData:
         if data.date == tday:
             dDic = {
-            "sid": data.id,
-            "sensor": sData.sname,
-            "building": sData.building,
-            "room": sData.room,
             "did": data.id,
             "vtype": data.vtype,
             "value": data.value,
-            "date": data.date
+            "date": data.date,
+            "time": data.time
             }
-            dList.append(dDic)
+            dList[0]["data"].append(dDic)
 
     next_url = request.args.get('next')
     #if this url was accessed directly pass back a JSON Array other wise go back to the original route
@@ -224,21 +226,21 @@ def getDayData(sensor):
 
 #Add Data to DB
 @app.route("/<sensor>/<dtype>/<building>/<room>/<value>/<date>")
-def addData(sensor,dtype,building, room, value,date):
+def addData(sensor,dtype,building, room, value,date, time):
     #Check if sensor already exsists in database
     theSensor = Sensor.query.filter((Sensor.sname == sensor)).one()
     #if the sensor does not exsist create it, otherwise just add the data.
     if theSensor is None:
         #Create sensor and data objects and commit them to the DB
         #Create Sensor
-        asensor = Sensor(sname=sensor,building=building,room=room)
+        asensor = Sensor(sname=sensor,building=building,room=room, vtype=dtype)
         db.session.add(asensor)
     else: 
         #make set the sensor to add the data to, to be equal to the queried sensor
         asensor = theSensor
 
     #Create Sensor Data assigned to sensor
-    sensordata = SensorData(vtype=dtype,value=value,date=date, sensor=asensor)
+    sensordata = SensorData(value=value,date=date, time=time, sensor=asensor)
     db.session.add(sensordata)
     #Commit Data to database
     db.session.commit()
