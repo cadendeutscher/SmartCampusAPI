@@ -1,4 +1,4 @@
-from flask import Flask, abort, redirect, render_template, request, url_for, jsonify
+from flask import Flask, abort, redirect, render_template, request, url_for, session, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
 import json
@@ -8,6 +8,8 @@ import pip._vendor.requests
 app = Flask(__name__)
  
 db = SQLAlchemy()
+
+app.secret_key = 'thisisasecretkeythatshouldbechanged'
 
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///data.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -30,7 +32,7 @@ class SensorData(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     value =db.Column(db.String(80), nullable = False)
     date = db.Column(db.String(80), nullable = False)
-    time = db.Column(db.String(80), nullable = False)
+    time = db.Column(db.Integer, nullable = False)
     sensor_id = db.Column(db.Integer, db.ForeignKey('sensor.id'), nullable = False)
    
 
@@ -209,7 +211,6 @@ def getDayData(sensor):
         if data.date == tday:
             dDic = {
             "did": data.id,
-            "vtype": data.vtype,
             "value": data.value,
             "date": data.date,
             "time": data.time
@@ -225,10 +226,11 @@ def getDayData(sensor):
  
 
 #Add Data to DB
-@app.route("/<sensor>/<dtype>/<building>/<room>/<value>/<date>")
-def addData(sensor,dtype,building, room, value,date, time):
+#/t/kwh/shiley/201/15/2023-01-12/1815
+@app.route("/<sensor>/<dtype>/<building>/<room>/<value>/<date>/<time>")
+def addData(sensor,dtype,building, room, value, date, time):
     #Check if sensor already exsists in database
-    theSensor = Sensor.query.filter((Sensor.sname == sensor)).one()
+    theSensor = Sensor.query.filter((Sensor.sname == sensor)).first()
     #if the sensor does not exsist create it, otherwise just add the data.
     if theSensor is None:
         #Create sensor and data objects and commit them to the DB
@@ -255,4 +257,6 @@ def displaySensorInfo(sensorName):
         #Redirect to the getDayData url to get JSON objects for the days date...by passing the next arguement we tell it to redirect back here
         return redirect(url_for('getDayData', sensor = sensorName, next="redirect"))
     else:
+        #Load the data as a JSON dictionary if it exists
+        data = json.loads(data)
         return render_template("sensorinfo.html", data=data)
